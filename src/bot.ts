@@ -130,6 +130,9 @@ bot.command('test', (ctx) => ctx.reply('Bot is working!'));
 bot.catch((err: any) => console.error('Bot error:', err));
 
 // ---------- বট চালু ----------
-bot.launch(() => {
-  console.log('✅ Bot is now polling Telegram...');
-});
+// ওয়েবহুক সেটআপ (Production)
+const WEBHOOK_URL = `${config.baseUrl}/telegram/webhook`;
+bot.telegram.setWebhook(WEBHOOK_URL);
+console.log(`✅ Webhook set to ${WEBHOOK_URL}`);
+
+export { bot };

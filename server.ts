@@ -29,6 +29,6 @@ app.get('/', (req, res) => {
   res.send('Max Ads Bot Server Running!');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+// টেলিগ্রাম ওয়েবহুক রুট
+import { bot } from './bot';
+app.use(bot.webhookCallback('/telegram/webhook'));
