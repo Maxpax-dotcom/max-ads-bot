@@ -3,6 +3,7 @@ dotenv.config();
 
 export const config = {
   port: process.env.PORT || 3000,
+  baseUrl: process.env.BASE_URL || 'http://localhost:3000', // নতুন ফিল্ড
   dbUrl: process.env.DATABASE_URL || '',
   metaAppId: process.env.META_APP_ID || '',
   metaAppSecret: process.env.META_APP_SECRET || '',
