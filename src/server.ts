@@ -4,15 +4,18 @@ import path from 'path';
 import { config } from './config';
 import authRoutes from './routes/auth';
 import businessRoutes from './routes/businesses';
-import './bot'; // টেলিগ্রাম বট চালু করবে
+// টেলিগ্রাম বট ওয়েবহুক
+import { bot } from './bot';
+
 const app = express();
 
 // মিডলওয়্যার
 app.use(cors());
 app.use(express.json());
-
-// static ফাইল (CSS, JS, ইমেজ) সার্ভ করার জন্য public ফোল্ডার
 app.use(express.static(path.join(__dirname, '../public')));
+
+// ওয়েবহুক রুট (সবচেয়ে আগে, যাতে body parser কাজ করে)
+app.use(bot.webhookCallback('/telegram/webhook'));
 
 // API রাউট
 app.use('/api/auth', authRoutes);

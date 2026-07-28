@@ -45,7 +45,7 @@ bot.command('create', (ctx) => {
 
 // ---------- /addaccount ----------
 bot.command('addaccount', (ctx) => {
-  const oauthUrl = `http://localhost:${config.port}/api/auth/login?telegramId=${ctx.from.id}`;
+  const oauthUrl = `${config.baseUrl}/api/auth/telegram?telegramId=${ctx.from.id}`;
   ctx.reply(
     `🔗 *Add New Facebook Account*\n\n` +
     `Click the link below to link a new Facebook account:\n\n` +
@@ -60,11 +60,9 @@ bot.command('listaccounts', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
 
-  // টেলিগ্রাম আইডি থেকে ইউজার UUID বের করো
   const user = await getUserByTelegramId(telegramId);
   if (!user) return ctx.reply('User not found. Please /start first.');
 
-  // ইউজারের সব ফেসবুক অ্যাকাউন্ট আনো
   const accounts = await listFacebookAccounts(user.id);
   if (accounts.length === 0) {
     return ctx.reply('No linked Facebook accounts. Use /addaccount.');
@@ -79,7 +77,7 @@ bot.command('listaccounts', async (ctx) => {
   ctx.reply(msg, { parse_mode: 'Markdown' });
 });
 
-// ---------- /switchaccount (ইনলাইন বাটন সহ) ----------
+// ---------- /switchaccount ----------
 bot.command('switchaccount', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
@@ -92,7 +90,6 @@ bot.command('switchaccount', async (ctx) => {
     return ctx.reply('No linked Facebook accounts. Use /addaccount.');
   }
 
-  // প্রতিটি অ্যাকাউন্টের জন্য একটি বাটন তৈরি
   const buttons = accounts.map((acc: any) => [
     Markup.button.callback(`${acc.name} (${acc.email})`, `switch_to_${acc.id}`)
   ]);
@@ -103,7 +100,7 @@ bot.command('switchaccount', async (ctx) => {
   });
 });
 
-// ---------- অ্যাকশন হ্যান্ডলার: অ্যাকাউন্ট সুইচ ----------
+// অ্যাকশন হ্যান্ডলার: অ্যাকাউন্ট সুইচ
 bot.action(/^switch_to_(.+)$/, async (ctx) => {
   const accountId = ctx.match[1];
   const telegramId = ctx.from?.id;
@@ -112,27 +109,24 @@ bot.action(/^switch_to_(.+)$/, async (ctx) => {
   const user = await getUserByTelegramId(telegramId);
   if (!user) return ctx.answerCbQuery('User not found.');
 
-  // নির্দিষ্ট অ্যাকাউন্টটিকে অ্যাক্টিভ করে দাও
   await setActiveFacebookAccount(user.id, accountId);
   await ctx.answerCbQuery('Account switched successfully!');
 
-  // পুরানো মেসেজ আপডেট না করে নতুন করে জানিয়ে দাও
   const active = await getActiveFacebookAccount(user.id);
   ctx.reply(`✅ Active account is now: *${active?.name}* (${active?.email})`, {
     parse_mode: 'Markdown'
   });
 });
 
-// ---------- /test কমান্ড ----------
-bot.command('test', (ctx) => ctx.reply('Bot is working!'));
-
 // ---------- ত্রুটি ধরা ----------
-bot.catch((err: any) => console.error('Bot error:', err));
+bot.catch((err: any, ctx) => {
+  console.error('❌ Bot error for update', ctx.updateType, ':', err);
+});
 
-// ---------- বট চালু ----------
-// ওয়েবহুক সেটআপ (Production)
+// ---------- ওয়েবহুক সেটআপ (Production) ----------
 const WEBHOOK_URL = `${config.baseUrl}/telegram/webhook`;
 bot.telegram.setWebhook(WEBHOOK_URL);
 console.log(`✅ Webhook set to ${WEBHOOK_URL}`);
 
+// বট এক্সপোর্ট করো, যাতে server.ts ব্যবহার করতে পারে
 export { bot };
