@@ -15,14 +15,10 @@ export const createCampaignScene = new Scenes.WizardScene(
 
   // ========== ধাপ ১: অ্যাড অ্যাকাউন্ট নির্বাচন ==========
   async (ctx) => {
-    // সেশনে ক্যাম্পেইন ডেটা জমা রাখার জন্য ফাঁকা অবজেক্ট
-    (ctx as any).session.campaignData = {};
-
-    const telegramId = ctx.from?.id;
-    if (!telegramId) {
-      await ctx.reply('User ID not found.');
-      return ctx.scene.leave();
-    }
+  console.log('Wizard Step 1 entered');
+  await ctx.reply('✅ Campaign wizard started! Select an option (coming soon).');
+  return ctx.scene.leave();
+},
 
     // ---------- UUID ফিক্স ----------
     // প্রথমে টেলিগ্রাম আইডি থেকে users টেবিলের UUID বের করো

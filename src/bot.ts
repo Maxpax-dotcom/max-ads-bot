@@ -38,14 +38,9 @@ bot.use((ctx, next) => {
 bot.start(startCommand);
 
 // ---------- /create → ক্যাম্পেইন উইজার্ড ----------
-bot.command('create', async (ctx) => {
-  console.log('/create triggered');
-  try {
-    // শুধু টেস্ট রিপ্লাই, কোনো সিন বা ডাটাবেজ কল নয়
-    await ctx.reply('✅ Create command is working. Wait for wizard fix...');
-  } catch (err) {
-    console.error('Test reply error:', err);
-  }
+bot.command('create', (ctx) => {
+  console.log('/create command triggered');
+  (ctx as any).scene.enter('CREATE_CAMPAIGN');
 });
 
 // ---------- /addaccount ----------
