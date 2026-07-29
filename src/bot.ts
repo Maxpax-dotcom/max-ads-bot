@@ -38,9 +38,17 @@ bot.use((ctx, next) => {
 bot.start(startCommand);
 
 // ---------- /create → ক্যাম্পেইন উইজার্ড ----------
-bot.command('create', (ctx) => {
-  console.log('/create command triggered');
-  (ctx as any).scene.enter('CREATE_CAMPAIGN');
+bot.command('create', async (ctx) => {
+  console.log('/create triggered');
+  // প্রথমে টেস্ট: scene ছাড়াই রিপ্লাই দাও
+  await ctx.reply('✅ Create command received. Starting wizard...');
+  // তারপর scene-এ পাঠাও, কিন্তু error handle করো
+  try {
+    await (ctx as any).scene.enter('CREATE_CAMPAIGN');
+  } catch (err: any) {
+    console.error('Scene enter error:', err);
+    await ctx.reply('❌ Error starting wizard: ' + err.message);
+  }
 });
 
 // ---------- /addaccount ----------
