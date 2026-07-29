@@ -26,13 +26,16 @@ bot.use((ctx, next) => {
   return next();
 });
 
+// ---------- /start ----------
 bot.start(startCommand);
 
+// ---------- /create (wizard) ----------
 bot.command('create', (ctx) => {
   console.log('/create triggered');
   (ctx as any).scene.enter('CREATE_CAMPAIGN');
 });
 
+// ---------- /addaccount ----------
 bot.command('addaccount', (ctx) => {
   const oauthUrl = `${config.baseUrl}/api/auth/telegram?telegramId=${ctx.from.id}`;
   ctx.reply(
@@ -44,6 +47,7 @@ bot.command('addaccount', (ctx) => {
   );
 });
 
+// ---------- /cancel ----------
 bot.command('cancel', (ctx) => {
   try {
     (ctx as any).scene.leave();
@@ -51,6 +55,7 @@ bot.command('cancel', (ctx) => {
   ctx.reply('✅ Wizard cancelled. You can now use other commands.');
 });
 
+// ---------- /listaccounts ----------
 bot.command('listaccounts', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
@@ -72,6 +77,7 @@ bot.command('listaccounts', async (ctx) => {
   ctx.reply(msg, { parse_mode: 'Markdown' });
 });
 
+// ---------- /switchaccount ----------
 bot.command('switchaccount', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
@@ -94,6 +100,7 @@ bot.command('switchaccount', async (ctx) => {
   });
 });
 
+// ---------- অ্যাকাউন্ট সুইচ অ্যাকশন ----------
 bot.action(/^switch_to_(.+)$/, async (ctx) => {
   const accountId = ctx.match[1];
   const telegramId = ctx.from?.id;
@@ -111,10 +118,133 @@ bot.action(/^switch_to_(.+)$/, async (ctx) => {
   });
 });
 
+// ---------- /webapp (Telegram Web App বাটন) ----------
+bot.command('webapp', (ctx) => {
+  ctx.reply('Open campaign creator:', {
+    reply_markup: {
+      inline_keyboard: [[
+        { text: '📝 Open Form', web_app: { url: `${config.baseUrl}/dashboard` } }
+      ]]
+    }
+  });
+});
+
+// ---------- /boost (কমান্ড লাইন) ----------
+bot.command('boost', async (ctx) => {
+  const telegramId = ctx.from?.id;
+  if (!telegramId) return ctx.reply('User ID not found.');
+
+  const user = await getUserByTelegramId(telegramId);
+  if (!user) return ctx.reply('User not found. Please /start first.');
+
+  const fb = await getActiveFacebookAccount(user.id);
+  if (!fb) return ctx.reply('No linked Facebook account. Use /addaccount first.');
+
+  const text = ctx.message?.text?.trim() || '';
+  const parts = text.split(' ').slice(1); // /boost-এর পরের অংশ
+  if (parts.length < 4) {
+    return ctx.reply(
+      '❌ Format:\n/boost <ad_account_id> <page_id> <post_id> <target_url> <budget> <duration>\n\n' +
+      'Example:\n/boost act_123 456 789_post https://example.com 5 continuous',
+      { parse_mode: 'Markdown' }
+    );
+  }
+
+  const [adAccountId, pageId, postId, targetUrl, budgetStr, duration] = parts;
+  const budget = parseFloat(budgetStr);
+  if (isNaN(budget) || budget < 1) return ctx.reply('Invalid budget.');
+
+  const meta = new MetaService(fb.access_token);
+
+  try {
+    const campaignParams = {
+      name: `Boosted post ${postId}`,
+      objective: 'LINK_CLICKS',
+      status: 'PAUSED',
+    };
+    const campaign = await meta.createCampaign(adAccountId, campaignParams);
+
+    await createCampaignRecord({
+      userId: user.id,
+      facebookAccountId: fb.id,
+      adAccountId: adAccountId,
+      metaCampaignId: campaign.id,
+      pageId: pageId,
+      postId: postId,
+      objective: 'LINK_CLICKS',
+      status: 'PAUSED',
+      dailyBudget: duration === 'continuous' ? budget : null,
+      lifetimeBudget: duration !== 'continuous' ? budget : null,
+      startTime: new Date(),
+      endTime: duration !== 'continuous' ? new Date(Date.now() + parseInt(duration) * 86400000) : null,
+      targeting: { countries: ['BD'], age_min: 18, age_max: 65, gender: 'all' },
+      creative: { target_url: targetUrl },
+    });
+
+    ctx.reply(`✅ Campaign created! ID: ${campaign.id}`);
+  } catch (error: any) {
+    console.error('Boost error:', error);
+    ctx.reply('❌ Failed: ' + (error.message || 'Unknown error'));
+  }
+});
+
+// ---------- Web App থেকে ডাটা (ফর্ম সাবমিট) ----------
+bot.on('web_app_data', async (ctx) => {
+  const telegramId = ctx.from?.id;
+  if (!telegramId) return;
+
+  const user = await getUserByTelegramId(telegramId);
+  if (!user) return ctx.reply('User not found.');
+
+  const fb = await getActiveFacebookAccount(user.id);
+  if (!fb) return ctx.reply('No linked Facebook account.');
+
+  try {
+    const data = JSON.parse(ctx.message?.web_app_data?.data || '{}');
+    const meta = new MetaService(fb.access_token);
+
+    const campaignParams = {
+      name: data.postId ? `Boosted post ${data.postId}` : `Traffic ad ${data.targetUrl}`,
+      objective: data.objective || 'LINK_CLICKS',
+      status: 'PAUSED',
+    };
+    const campaign = await meta.createCampaign(data.adAccountId, campaignParams);
+
+    await createCampaignRecord({
+      userId: user.id,
+      facebookAccountId: fb.id,
+      adAccountId: data.adAccountId,
+      metaCampaignId: campaign.id,
+      pageId: data.pageId,
+      postId: data.postId,
+      objective: campaignParams.objective,
+      status: 'PAUSED',
+      dailyBudget: data.durationType === 'continuous' ? data.budget : null,
+      lifetimeBudget: data.durationType !== 'continuous' ? data.budget : null,
+      startTime: new Date(),
+      endTime: data.durationType !== 'continuous' ? new Date(Date.now() + data.days * 86400000) : null,
+      targeting: {
+        countries: data.countries,
+        age_min: data.ageMin,
+        age_max: data.ageMax,
+        gender: data.gender,
+      },
+      creative: { target_url: data.targetUrl },
+    });
+
+    ctx.reply(`✅ Campaign created! ID: ${campaign.id}`);
+  } catch (error: any) {
+    console.error('WebApp boost error:', error);
+    ctx.reply('❌ Failed: ' + (error.message || 'Unknown error'));
+  }
+});
+
+// ---------- ত্রুটি ধরা ----------
 bot.catch((err: any, ctx) => {
   console.error('❌ Bot error for update', ctx.updateType, ':', err);
 });
 
+// ---------- ওয়েবহুক সেটআপ ----------
 const WEBHOOK_URL = `${config.baseUrl}/telegram/webhook`;
 bot.telegram.setWebhook(WEBHOOK_URL);
 console.log(`✅ Webhook set to ${WEBHOOK_URL}`);
