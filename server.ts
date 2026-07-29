@@ -12,7 +12,6 @@ import { bot } from './bot';
 
 const app = express();
 
-// মিডলওয়্যার
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
@@ -20,7 +19,6 @@ app.use(express.static(path.join(__dirname, '../public')));
 // ওয়েবহুক রুট
 app.use(bot.webhookCallback('/telegram/webhook'));
 
-// API রাউট
 app.use('/api/auth', authRoutes);
 app.use('/api/businesses', businessRoutes);
 
@@ -34,7 +32,10 @@ app.get('/', (req, res) => {
 
 // অটোমেটিক মাইগ্রেশন
 async function autoMigrate() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false }, // Render-এর জন্য SSL
+  });
   const migrationFiles = [
     '001_users.sql',
     '002_facebook_accounts.sql',
@@ -59,9 +60,8 @@ async function autoMigrate() {
   await pool.end();
 }
 
-// সার্ভার চালুর আগে মাইগ্রেশন চালাই
 autoMigrate().then(() => {
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 10000;
   app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
