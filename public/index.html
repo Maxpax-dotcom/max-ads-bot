@@ -3,71 +3,103 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Max Ads Bot | Dashboard</title>
-  <!-- Google Fonts (Inter) -->
+  <title>Max Ads Bot | Campaign Creator</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <!-- Font Awesome 6 (আইকনের জন্য) -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- নিজস্ব CSS -->
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ফর্ম টেবিল স্টাইল */
+    .campaign-form { max-width: 800px; margin: 2rem auto; }
+    .form-table { width: 100%; border-collapse: collapse; }
+    .form-table td { padding: 0.8rem; border-bottom: 1px solid var(--glass-border); }
+    .form-table td:first-child { width: 180px; font-weight: 500; }
+    .form-table input, .form-table select { width: 100%; padding: 0.5rem; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.05); color: var(--text); }
+    .boost-btn { background: linear-gradient(135deg, #6C63FF, #FF6584); color: white; border: none; padding: 0.8rem 2rem; border-radius: 30px; font-weight: 600; cursor: pointer; margin-top: 1rem; }
+  </style>
 </head>
 <body>
-  <!-- সাইডবার (মোবাইলে হাইড থাকে) -->
   <div class="sidebar" id="sidebar">
     <div class="logo">⚡ Max Ads</div>
     <nav>
-      <div class="nav-item active" data-page="dashboard">
-        <i class="fas fa-chart-pie"></i> <span>Dashboard</span>
-      </div>
-      <div class="nav-item" data-page="adaccounts">
-        <i class="fas fa-ad"></i> <span>Ad Accounts</span>
-      </div>
-      <div class="nav-item" data-page="pages">
-        <i class="fas fa-file-alt"></i> <span>Pages</span>
-      </div>
-      <div class="nav-item" data-page="campaigns">
-        <i class="fas fa-bullhorn"></i> <span>Campaigns</span>
-      </div>
-      <div class="nav-item" data-page="reports">
-        <i class="fas fa-chart-line"></i> <span>Reports</span>
-      </div>
-      <div class="nav-item" data-page="settings">
-        <i class="fas fa-cog"></i> <span>Settings</span>
-      </div>
-      <div class="nav-item" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
-      </div>
+      <div class="nav-item active" data-page="dashboard"><i class="fas fa-chart-pie"></i><span>Dashboard</span></div>
+      <div class="nav-item" data-page="adaccounts"><i class="fas fa-ad"></i><span>Ad Accounts</span></div>
+      <div class="nav-item" data-page="pages"><i class="fas fa-file-alt"></i><span>Pages</span></div>
+      <div class="nav-item" data-page="campaigns"><i class="fas fa-bullhorn"></i><span>Campaigns</span></div>
+      <div class="nav-item" data-page="reports"><i class="fas fa-chart-line"></i><span>Reports</span></div>
+      <div class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></div>
     </nav>
   </div>
-
-  <!-- মেইন কন্টেন্ট -->
   <div class="main">
-    <!-- টপবার -->
     <div class="topbar">
-      <button class="mobile-menu" id="mobileMenuBtn">
-        <i class="fas fa-bars"></i>
-      </button>
-      <h2 id="pageTitle">Dashboard</h2>
+      <button class="mobile-menu" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
+      <h2 id="pageTitle">Campaign Creator</h2>
       <div class="topbar-right">
-        <button class="theme-toggle" id="themeToggle">
-          <i class="fas fa-sun"></i>
-        </button>
-        <div class="user-info" id="userInfo">
-          <img src="" alt="Profile" id="userAvatar">
-          <span id="userName">Loading...</span>
-        </div>
+        <button class="theme-toggle" id="themeToggle"><i class="fas fa-sun"></i></button>
+        <div class="user-info"><span id="userName">Loading...</span></div>
       </div>
     </div>
-
-    <!-- ড্যাশবোর্ড কন্টেন্ট এরিয়া (কার্ড ও টেবিল) -->
-    <div class="content" id="dashboardContent">
-      <!-- জাভাস্ক্রিপ্ট দিয়ে ডাইনামিকভাবে পূরণ হবে -->
-      <div class="loading">Loading...</div>
+    <div class="content" id="mainContent">
+      <div class="card campaign-form">
+        <h3 style="margin-bottom:1rem">🚀 Boost Post</h3>
+        <table class="form-table">
+          <tr><td>AD Account ID</td><td><input type="text" id="adAccountId" placeholder="act_123456789"></td></tr>
+          <tr><td>Page ID</td><td><input type="text" id="pageId" placeholder="123456789"></td></tr>
+          <tr><td>Post ID</td><td><input type="text" id="postId" placeholder="123456789_123456789"></td></tr>
+          <tr><td>Target URL</td><td><input type="url" id="targetUrl" placeholder="https://example.com"></td></tr>
+          <tr><td>CTA Button</td>
+            <td><select id="cta">
+              <option value="WATCH_MORE">Watch More</option>
+              <option value="LEARN_MORE">Learn More</option>
+              <option value="SHOP_NOW">Shop Now</option>
+              <option value="ORDER_NOW">Order Now</option>
+              <option value="SIGN_UP">Sign Up</option>
+              <option value="CONTACT_US">Contact Us</option>
+              <option value="DOWNLOAD">Download</option>
+              <option value="SEE_MENU">See Menu</option>
+              <option value="BOOK_NOW">Book Now</option>
+              <option value="APPLY_NOW">Apply Now</option>
+              <option value="NONE">No Button</option>
+            </select></td>
+          </tr>
+          <tr><td>Budget (USD)</td><td><input type="number" id="budget" placeholder="5" min="1"></td></tr>
+          <tr><td>Duration</td>
+            <td>
+              <select id="durationType">
+                <option value="continuous">Continuous (Run until paused)</option>
+                <option value="days">Days</option>
+              </select>
+              <input type="number" id="days" placeholder="1" min="1" style="margin-top:0.5rem; display:none;">
+            </td>
+          </tr>
+          <tr><td>Objective</td>
+            <td><select id="objective">
+              <option value="LINK_CLICKS">Link Clicks</option>
+              <option value="POST_ENGAGEMENT">Post Engagement</option>
+              <option value="PAGE_LIKES">Page Likes</option>
+              <option value="MESSAGES">Messages</option>
+            </select></td>
+          </tr>
+          <tr><td>Gender</td>
+            <td><select id="gender">
+              <option value="all">All</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select></td>
+          </tr>
+          <tr><td>Age Range</td>
+            <td><input type="number" id="ageMin" placeholder="18" min="13" max="65" style="width:80px;"> to 
+                <input type="number" id="ageMax" placeholder="65" min="13" max="65" style="width:80px;"></td>
+          </tr>
+          <tr><td>Countries</td>
+            <td><input type="text" id="countries" placeholder="e.g., BD, US, IN (comma separated)"></td>
+          </tr>
+        </table>
+        <button class="boost-btn" id="boostBtn">🚀 Boost Post</button>
+        <div id="boostStatus" style="margin-top:1rem;"></div>
+      </div>
     </div>
   </div>
-
-  <!-- নিজস্ব জাভাস্ক্রিপ্ট -->
   <script src="js/theme.js"></script>
   <script src="js/app.js"></script>
 </body>
