@@ -60,6 +60,14 @@ bot.command('listaccounts', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
 
+bot.command('reset', (ctx) => {
+  (ctx as any).session = null;
+  try {
+    (ctx as any).scene.leave();
+  } catch (e) {}
+  ctx.reply('✅ Session reset. You can now use other commands.');
+});
+
   const user = await getUserByTelegramId(telegramId);
   if (!user) return ctx.reply('User not found. Please /start first.');
 
@@ -118,7 +126,7 @@ bot.action(/^switch_to_(.+)$/, async (ctx) => {
   });
 });
 
-// ---------- /webapp (Telegram Web App বাটন) ----------
+// ---------- /webapp (Telegram Mini App বাটন) ----------
 bot.command('webapp', (ctx) => {
   ctx.reply('Open campaign creator:', {
     reply_markup: {
@@ -141,7 +149,7 @@ bot.command('boost', async (ctx) => {
   if (!fb) return ctx.reply('No linked Facebook account. Use /addaccount first.');
 
   const text = ctx.message?.text?.trim() || '';
-  const parts = text.split(' ').slice(1); // /boost-এর পরের অংশ
+  const parts = text.split(' ').slice(1);
   if (parts.length < 4) {
     return ctx.reply(
       '❌ Format:\n/boost <ad_account_id> <page_id> <post_id> <target_url> <budget> <duration>\n\n' +
@@ -188,7 +196,7 @@ bot.command('boost', async (ctx) => {
   }
 });
 
-// ---------- Web App থেকে ডাটা (ফর্ম সাবমিট) ----------
+// ---------- Mini App থেকে ডাটা (ফর্ম সাবমিট) ----------
 bot.on('web_app_data', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return;

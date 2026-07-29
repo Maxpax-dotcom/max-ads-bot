@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* ফর্ম টেবিল স্টাইল */
     .campaign-form { max-width: 800px; margin: 2rem auto; }
     .form-table { width: 100%; border-collapse: collapse; }
     .form-table td { padding: 0.8rem; border-bottom: 1px solid var(--glass-border); }
@@ -101,31 +100,34 @@
     </div>
   </div>
   <script src="js/theme.js"></script>
-  <script src="js/app.js"></script>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<script>
-  const tg = window.Telegram.WebApp;
-  tg.ready();
-  tg.MainButton.setText('Boost Post').show();
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.ready();
+    tg.MainButton.setText('Boost Post').show();
 
-  document.getElementById('boostBtn').addEventListener('click', () => {
-    const data = {
-      adAccountId: document.getElementById('adAccountId').value.trim(),
-      pageId: document.getElementById('pageId').value.trim(),
-      postId: document.getElementById('postId').value.trim(),
-      targetUrl: document.getElementById('targetUrl').value.trim(),
-      cta: document.getElementById('cta').value,
-      budget: parseFloat(document.getElementById('budget').value),
-      durationType: document.getElementById('durationType').value,
-      days: parseInt(document.getElementById('days').value) || 0,
-      objective: document.getElementById('objective').value,
-      gender: document.getElementById('gender').value,
-      ageMin: parseInt(document.getElementById('ageMin').value) || 18,
-      ageMax: parseInt(document.getElementById('ageMax').value) || 65,
-      countries: document.getElementById('countries').value.split(',').map(c => c.trim()).filter(Boolean)
-    };
-    tg.sendData(JSON.stringify(data));
-  });
-</script>
+    document.getElementById('durationType').addEventListener('change', function() {
+      document.getElementById('days').style.display = this.value === 'days' ? 'inline-block' : 'none';
+    });
+
+    document.getElementById('boostBtn').addEventListener('click', () => {
+      const data = {
+        adAccountId: document.getElementById('adAccountId').value.trim(),
+        pageId: document.getElementById('pageId').value.trim(),
+        postId: document.getElementById('postId').value.trim(),
+        targetUrl: document.getElementById('targetUrl').value.trim(),
+        cta: document.getElementById('cta').value,
+        budget: parseFloat(document.getElementById('budget').value),
+        durationType: document.getElementById('durationType').value,
+        days: parseInt(document.getElementById('days').value) || 0,
+        objective: document.getElementById('objective').value,
+        gender: document.getElementById('gender').value,
+        ageMin: parseInt(document.getElementById('ageMin').value) || 18,
+        ageMax: parseInt(document.getElementById('ageMax').value) || 65,
+        countries: document.getElementById('countries').value.split(',').map(c => c.trim()).filter(Boolean)
+      };
+      tg.sendData(JSON.stringify(data));
+    });
+  </script>
 </body>
 </html>
