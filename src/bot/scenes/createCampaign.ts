@@ -15,22 +15,22 @@ export const createCampaignScene = new Scenes.WizardScene(
 
   // ========== ধাপ ১: অ্যাড অ্যাকাউন্ট নির্বাচন ==========
   async (ctx) => {
-  console.log('Wizard Step 1 entered');
-  await ctx.reply('✅ Campaign wizard started! Select an option (coming soon).');
-  return ctx.scene.leave();
-},
+    (ctx as any).session.campaignData = {};
 
-    // ---------- UUID ফিক্স ----------
-    // প্রথমে টেলিগ্রাম আইডি থেকে users টেবিলের UUID বের করো
+    const telegramId = ctx.from?.id;
+    if (!telegramId) {
+      await ctx.reply('User ID not found.');
+      return ctx.scene.leave();
+    }
+
+    // ইউজারের UUID বের করো
     const user = await getUserByTelegramId(telegramId);
     if (!user) {
       await ctx.reply('User not found in database. Please /start first.');
       return ctx.scene.leave();
     }
-    // UUID ব্যবহার করে অ্যাক্টিভ ফেসবুক অ্যাকাউন্ট খুঁজো
+    // অ্যাক্টিভ ফেসবুক অ্যাকাউন্ট খুঁজো
     const fb = await getActiveFacebookAccount(user.id);
-    // --------------------------------
-
     if (!fb) {
       await ctx.reply('No linked Facebook account. Use /addaccount first.');
       return ctx.scene.leave();
@@ -39,41 +39,30 @@ export const createCampaignScene = new Scenes.WizardScene(
     const meta = new MetaService(fb.access_token);
 
     try {
-      // ---------- ফলব্যাক লজিক (বিজনেস ম্যানেজার → ব্যক্তিগত অ্যাকাউন্ট) ----------
+      // প্রথমে বিজনেস ম্যানেজার, তারপর ব্যক্তিগত অ্যাকাউন্ট
       const businesses = await meta.getBusinesses();
       let adAccounts: any[] = [];
-
-      // প্রথমে বিজনেস ম্যানেজার থাকলে তার অ্যাড অ্যাকাউন্ট আনার চেষ্টা
       if (businesses && businesses.length > 0) {
         adAccounts = await meta.getAdAccounts(businesses[0].id);
       }
-
-      // যদি বিজনেস অ্যাকাউন্ট না থাকে বা খালি আসে, তাহলে ব্যক্তিগত অ্যাড অ্যাকাউন্ট আনো
       if (!adAccounts || adAccounts.length === 0) {
-        adAccounts = await meta.getPersonalAdAccounts(); // এই মেথডটি MetaService-এ এখনো নেই, পরের ধাপে যোগ করবো
+        adAccounts = await meta.getPersonalAdAccounts();
       }
-      // -------------------------------------------------------------------------
-
       if (!adAccounts || adAccounts.length === 0) {
         await ctx.reply('No ad account found.');
         return ctx.scene.leave();
       }
 
-      // সেশনে মেটা সার্ভিস ও অ্যাড অ্যাকাউন্ট সংরক্ষণ করো
       (ctx as any).session.meta = meta;
       (ctx as any).session.adAccounts = adAccounts;
 
-      // প্রতিটি অ্যাড অ্যাকাউন্টের জন্য বাটন তৈরি
       const buttons = adAccounts.map((acc: any) => [
         Markup.button.callback(`${acc.name} (${acc.currency})`, `select_adaccount_${acc.id}`)
       ]);
 
       await ctx.reply(
         '*Create Campaign - Step 1/6*\n\nSelect an ad account:',
-        {
-          parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard(buttons)
-        }
+        { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) }
       );
 
       return ctx.wizard.next();
@@ -87,26 +76,21 @@ export const createCampaignScene = new Scenes.WizardScene(
   // ========== ধাপ ২: ফেসবুক পেজ নির্বাচন ==========
   async (ctx) => {
     const meta: MetaService = (ctx as any).session.meta;
-
     try {
       const pages = await meta.getPages();
       if (!pages || pages.length === 0) {
         await ctx.reply('No Facebook Page found.');
         return ctx.scene.leave();
       }
-
       (ctx as any).session.pages = pages;
 
       const buttons = pages.map((page: any) => [
-        Markup.button.callback(`${page.name}`, `select_page_${page.id}`)
+        Markup.button.callback(page.name, `select_page_${page.id}`)
       ]);
 
       await ctx.reply(
         '*Create Campaign - Step 2/6*\n\nSelect a Facebook Page:',
-        {
-          parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard(buttons)
-        }
+        { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) }
       );
 
       return ctx.wizard.next();
@@ -117,7 +101,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     }
   },
 
-  // ========== ধাপ ৩: পেজের পোস্ট নির্বাচন ==========
+  // ========== ধাপ ৩: পোস্ট নির্বাচন ==========
   async (ctx) => {
     const meta: MetaService = (ctx as any).session.meta;
     const pages = (ctx as any).session.pages;
@@ -145,10 +129,7 @@ export const createCampaignScene = new Scenes.WizardScene(
 
       await ctx.reply(
         '*Create Campaign - Step 3/6*\n\nSelect a post to boost:',
-        {
-          parse_mode: 'Markdown',
-          ...Markup.inlineKeyboard(buttons)
-        }
+        { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) }
       );
 
       return ctx.wizard.next();
@@ -159,7 +140,7 @@ export const createCampaignScene = new Scenes.WizardScene(
     }
   },
 
-  // ========== ধাপ ৪: টার্গেটিং সেট করা ==========
+  // ========== ধাপ ৪: টার্গেটিং ==========
   async (ctx) => {
     (ctx as any).session.campaignData.targeting = {
       countries: ['BD'],
@@ -170,49 +151,33 @@ export const createCampaignScene = new Scenes.WizardScene(
     };
 
     const countryButtons = [
-      [
-        Markup.button.callback('🇧🇩 Bangladesh', 'target_country_BD'),
-        Markup.button.callback('🇮🇳 India', 'target_country_IN'),
-      ],
-      [
-        Markup.button.callback('🇺🇸 United States', 'target_country_US'),
-        Markup.button.callback('🇬🇧 United Kingdom', 'target_country_GB'),
-      ],
-      [
-        Markup.button.callback('🌍 All Countries', 'target_country_all'),
-      ],
+      [Markup.button.callback('🇧🇩 Bangladesh', 'target_country_BD'), Markup.button.callback('🇮🇳 India', 'target_country_IN')],
+      [Markup.button.callback('🇺🇸 United States', 'target_country_US'), Markup.button.callback('🇬🇧 United Kingdom', 'target_country_GB')],
+      [Markup.button.callback('🌍 All Countries', 'target_country_all')],
       [Markup.button.callback('➡️ Next (Age & Gender)', 'target_next')],
     ];
 
     await ctx.reply(
       '*Create Campaign - Step 4/6: Targeting*\n\nSelect target country:',
-      {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard(countryButtons)
-      }
+      { parse_mode: 'Markdown', ...Markup.inlineKeyboard(countryButtons) }
     );
 
     return ctx.wizard.next();
   },
 
-  // ========== ধাপ ৪-এক্সটেনশন: বয়স ও লিঙ্গ নির্বাচন ==========
+  // ========== ধাপ ৪-এক্সটেনশন: বয়স ও লিঙ্গ ==========
   async (ctx) => {
     const targeting = (ctx as any).session.campaignData.targeting;
     const countries = targeting.countries.includes('all') ? 'All' : targeting.countries.join(', ');
-
     await ctx.reply(
-      `*Current targeting:*\n` +
-      `Country: ${countries}\n` +
-      `Age: ${targeting.age_min}-${targeting.age_max}\n` +
-      `Gender: ${targeting.gender}\n\n` +
+      `*Current targeting:*\nCountry: ${countries}\nAge: ${targeting.age_min}-${targeting.age_max}\nGender: ${targeting.gender}\n\n` +
       `Send minimum age (e.g., 18) or type "skip" to keep current:`,
       { parse_mode: 'Markdown' }
     );
-
     return ctx.wizard.next();
   },
 
-  // ========== বয়স ইনপুট হ্যান্ডলার ==========
+  // বয়স ইনপুট হ্যান্ডলার
   async (ctx) => {
     const msg = (ctx as any).message?.text?.trim();
     if (msg && msg.toLowerCase() !== 'skip') {
@@ -223,12 +188,11 @@ export const createCampaignScene = new Scenes.WizardScene(
       }
       (ctx as any).session.campaignData.targeting.age_min = ageMin;
     }
-
     await ctx.reply('Now send maximum age (e.g., 65) or "skip":');
     return ctx.wizard.next();
   },
 
-  // ========== বয়স সর্বোচ্চ ইনপুট হ্যান্ডলার ==========
+  // বয়স সর্বোচ্চ ইনপুট হ্যান্ডলার
   async (ctx) => {
     const msg = (ctx as any).message?.text?.trim();
     if (msg && msg.toLowerCase() !== 'skip') {
@@ -240,47 +204,33 @@ export const createCampaignScene = new Scenes.WizardScene(
       }
       (ctx as any).session.campaignData.targeting.age_max = ageMax;
     }
-
     const genderButtons = [
-      [
-        Markup.button.callback('All', 'gender_all'),
-        Markup.button.callback('Male', 'gender_male'),
-        Markup.button.callback('Female', 'gender_female'),
-      ],
+      [Markup.button.callback('All', 'gender_all'), Markup.button.callback('Male', 'gender_male'), Markup.button.callback('Female', 'gender_female')],
     ];
-
     await ctx.reply('Select gender:', Markup.inlineKeyboard(genderButtons));
     return ctx.wizard.next();
   },
 
-  // ========== লিঙ্গ নির্বাচন হয়ে গেলে বাজেট ধাপ ==========
-  async (ctx) => {
-    return ctx.wizard.next();
-  },
-
-  // ========== ধাপ ৫: বাজেট ও সময় ==========
+  // ========== ধাপ ৫: বাজেট ==========
   async (ctx) => {
     (ctx as any).session.campaignData.dailyBudget = null;
     (ctx as any).session.campaignData.lifetimeBudget = null;
-
     await ctx.reply(
       '*Create Campaign - Step 5/6: Budget & Schedule*\n\n' +
       'Send daily budget in USD (minimum 1). For example: 5\n' +
       'Or type "lifetime" to set lifetime budget instead.',
       { parse_mode: 'Markdown' }
     );
-
     return ctx.wizard.next();
   },
 
-  // ========== বাজেট ইনপুট হ্যান্ডলার ==========
+  // বাজেট ইনপুট হ্যান্ডলার
   async (ctx) => {
     const msg = (ctx as any).message?.text?.trim().toLowerCase();
     if (msg === 'lifetime') {
       await ctx.reply('Send total lifetime budget in USD (minimum 1):');
       return ctx.wizard.next();
     }
-
     const amount = parseFloat(msg);
     if (isNaN(amount) || amount < 1) {
       await ctx.reply('Invalid budget. Please send a number greater than 0.');
@@ -288,12 +238,11 @@ export const createCampaignScene = new Scenes.WizardScene(
     }
     (ctx as any).session.campaignData.dailyBudget = amount;
     (ctx as any).session.campaignData.budgetType = 'daily';
-
     await ctx.reply('Send start date (YYYY-MM-DD) or "today":');
-    return ctx.wizard.selectStep(11);
+    return ctx.wizard.selectStep(12);
   },
 
-  // ========== লাইফটাইম বাজেট ইনপুট ==========
+  // লাইফটাইম বাজেট ইনপুট
   async (ctx) => {
     const amount = parseFloat((ctx as any).message?.text?.trim());
     if (isNaN(amount) || amount < 1) {
@@ -302,12 +251,11 @@ export const createCampaignScene = new Scenes.WizardScene(
     }
     (ctx as any).session.campaignData.lifetimeBudget = amount;
     (ctx as any).session.campaignData.budgetType = 'lifetime';
-
     await ctx.reply('Send start date (YYYY-MM-DD) or "today":');
     return ctx.wizard.next();
   },
 
-  // ========== শুরুর তারিখ ইনপুট ==========
+  // শুরুর তারিখ ইনপুট
   async (ctx) => {
     const msg = (ctx as any).message?.text?.trim().toLowerCase();
     let startDate: string;
@@ -321,12 +269,11 @@ export const createCampaignScene = new Scenes.WizardScene(
       startDate = msg;
     }
     (ctx as any).session.campaignData.startDate = startDate;
-
     await ctx.reply('Send end date (YYYY-MM-DD) or "none" for no end date:');
     return ctx.wizard.next();
   },
 
-  // ========== শেষ তারিখ ইনপুট ==========
+  // শেষ তারিখ ইনপুট
   async (ctx) => {
     const msg = (ctx as any).message?.text?.trim().toLowerCase();
     if (msg !== 'none') {
@@ -351,23 +298,15 @@ export const createCampaignScene = new Scenes.WizardScene(
 Create campaign?`;
 
     const confirmButtons = [
-      [
-        Markup.button.callback('✅ Confirm', 'confirm_campaign'),
-        Markup.button.callback('❌ Cancel', 'cancel_campaign'),
-      ],
+      [Markup.button.callback('✅ Confirm', 'confirm_campaign'), Markup.button.callback('❌ Cancel', 'cancel_campaign')],
     ];
 
-    await ctx.reply(summary, {
-      parse_mode: 'Markdown',
-      ...Markup.inlineKeyboard(confirmButtons),
-    });
-
+    await ctx.reply(summary, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(confirmButtons) });
     return ctx.wizard.next();
   },
 
-  // ========== ফাইনাল ধাপ (অ্যাকশন হ্যান্ডলার) ==========
+  // ফাইনাল ধাপ (অ্যাকশন হ্যান্ডলার)
   async (ctx) => {
-    // nothing, action handlers take over
     return;
   }
 );
@@ -375,22 +314,19 @@ Create campaign?`;
 // ===================== অ্যাকশন হ্যান্ডলারসমূহ =====================
 
 createCampaignScene.action(/^select_adaccount_(.+)$/, async (ctx) => {
-  const accountId = ctx.match[1];
-  (ctx as any).session.campaignData.adAccountId = accountId;
+  (ctx as any).session.campaignData.adAccountId = ctx.match[1];
   await ctx.answerCbQuery('Ad account selected');
   await ctx.wizard.next();
 });
 
 createCampaignScene.action(/^select_page_(.+)$/, async (ctx) => {
-  const pageId = ctx.match[1];
-  (ctx as any).session.campaignData.pageId = pageId;
+  (ctx as any).session.campaignData.pageId = ctx.match[1];
   await ctx.answerCbQuery('Page selected');
   await ctx.wizard.next();
 });
 
 createCampaignScene.action(/^select_post_(.+)$/, async (ctx) => {
-  const postId = ctx.match[1];
-  (ctx as any).session.campaignData.postId = postId;
+  (ctx as any).session.campaignData.postId = ctx.match[1];
   await ctx.answerCbQuery('Post selected');
   await ctx.wizard.next();
 });
@@ -398,11 +334,7 @@ createCampaignScene.action(/^select_post_(.+)$/, async (ctx) => {
 createCampaignScene.action(/^target_country_(.+)$/, async (ctx) => {
   const country = ctx.match[1];
   const targeting = (ctx as any).session.campaignData.targeting;
-  if (country === 'all') {
-    targeting.countries = ['all'];
-  } else {
-    targeting.countries = [country];
-  }
+  targeting.countries = country === 'all' ? ['all'] : [country];
   await ctx.answerCbQuery(`Country set to ${country}`);
 });
 
@@ -412,9 +344,8 @@ createCampaignScene.action('target_next', async (ctx) => {
 });
 
 createCampaignScene.action(/^gender_(.+)$/, async (ctx) => {
-  const gender = ctx.match[1];
-  (ctx as any).session.campaignData.targeting.gender = gender;
-  await ctx.answerCbQuery(`Gender set to ${gender}`);
+  (ctx as any).session.campaignData.targeting.gender = ctx.match[1];
+  await ctx.answerCbQuery(`Gender set to ${ctx.match[1]}`);
   await ctx.wizard.next();
   await ctx.wizard.next();
 });
@@ -433,7 +364,6 @@ createCampaignScene.action('confirm_campaign', async (ctx) => {
     };
     const campaign = await meta.createCampaign(data.adAccountId, campaignParams);
 
-    // ইউজারের UUID পেতে getUserByTelegramId ব্যবহার করি
     const user = await getUserByTelegramId(telegramId!);
     const fb = user ? await getActiveFacebookAccount(user.id) : null;
 
@@ -455,10 +385,9 @@ createCampaignScene.action('confirm_campaign', async (ctx) => {
     });
 
     await ctx.reply(`✅ Campaign created! ID: ${campaign.id}`);
-    await ctx.reply('You can manage it from /dashboard (web) or /active');
   } catch (error) {
     console.error('Campaign creation error:', error);
-    await ctx.reply('❌ Failed to create campaign. Please check your permissions and budget.');
+    await ctx.reply('❌ Failed to create campaign. Check permissions and budget.');
   }
   return ctx.scene.leave();
 });
