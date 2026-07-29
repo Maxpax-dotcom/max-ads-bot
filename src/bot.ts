@@ -1,31 +1,21 @@
-// টেলিগ্রাম বট ফ্রেমওয়ার্ক থেকে প্রয়োজনীয় ফাংশন
 import { Telegraf, Scenes, session, Markup } from 'telegraf';
-// .env থেকে কনফিগারেশন
 import { config } from './config';
-// /start কমান্ড হ্যান্ডলার
 import { startCommand } from './bot/commands/start';
-// ক্যাম্পেইন তৈরির উইজার্ড সিন
 import { createCampaignScene } from './bot/scenes/createCampaign';
-// ইউজারের UUID বের করার ফাংশন
 import { getUserByTelegramId } from './models/user';
-// ফেসবুক অ্যাকাউন্ট ম্যানেজমেন্ট ফাংশন
 import {
   getActiveFacebookAccount,
   listFacebookAccounts,
   setActiveFacebookAccount,
 } from './models/facebookAccount';
 
-// ---------- স্টেজ তৈরি (সিন ব্যবস্থাপনার জন্য) ----------
 const stage = new Scenes.Stage<any>([createCampaignScene]);
 
-// ---------- বট ইনস্ট্যান্স তৈরি ----------
 const bot = new Telegraf(config.telegramToken);
 
-// ---------- গ্লোবাল মিডলওয়্যার ----------
 bot.use(session());
 bot.use(stage.middleware());
 
-// ---------- ডিবাগিং মিডলওয়্যার ----------
 bot.use((ctx, next) => {
   console.log('📩 Update received:', ctx.updateType, 'from', ctx.from?.id);
   if (ctx.message && 'text' in ctx.message) {
@@ -34,24 +24,13 @@ bot.use((ctx, next) => {
   return next();
 });
 
-// ---------- /start কমান্ড ----------
 bot.start(startCommand);
 
-// ---------- /create → ক্যাম্পেইন উইজার্ড ----------
-bot.command('create', async (ctx) => {
+bot.command('create', (ctx) => {
   console.log('/create triggered');
-  // প্রথমে টেস্ট: scene ছাড়াই রিপ্লাই দাও
-  await ctx.reply('✅ Create command received. Starting wizard...');
-  // তারপর scene-এ পাঠাও, কিন্তু error handle করো
-  try {
-    await (ctx as any).scene.enter('CREATE_CAMPAIGN');
-  } catch (err: any) {
-    console.error('Scene enter error:', err);
-    await ctx.reply('❌ Error starting wizard: ' + err.message);
-  }
+  (ctx as any).scene.enter('CREATE_CAMPAIGN');
 });
 
-// ---------- /addaccount ----------
 bot.command('addaccount', (ctx) => {
   const oauthUrl = `${config.baseUrl}/api/auth/telegram?telegramId=${ctx.from.id}`;
   ctx.reply(
@@ -63,7 +42,13 @@ bot.command('addaccount', (ctx) => {
   );
 });
 
-// ---------- /listaccounts (সম্পূর্ণ কার্যকরী) ----------
+bot.command('cancel', (ctx) => {
+  try {
+    (ctx as any).scene.leave();
+  } catch (e) {}
+  ctx.reply('✅ Wizard cancelled. You can now use other commands.');
+});
+
 bot.command('listaccounts', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
@@ -85,7 +70,6 @@ bot.command('listaccounts', async (ctx) => {
   ctx.reply(msg, { parse_mode: 'Markdown' });
 });
 
-// ---------- /switchaccount ----------
 bot.command('switchaccount', async (ctx) => {
   const telegramId = ctx.from?.id;
   if (!telegramId) return ctx.reply('User ID not found.');
@@ -108,7 +92,6 @@ bot.command('switchaccount', async (ctx) => {
   });
 });
 
-// অ্যাকশন হ্যান্ডলার: অ্যাকাউন্ট সুইচ
 bot.action(/^switch_to_(.+)$/, async (ctx) => {
   const accountId = ctx.match[1];
   const telegramId = ctx.from?.id;
@@ -126,15 +109,12 @@ bot.action(/^switch_to_(.+)$/, async (ctx) => {
   });
 });
 
-// ---------- ত্রুটি ধরা ----------
 bot.catch((err: any, ctx) => {
   console.error('❌ Bot error for update', ctx.updateType, ':', err);
 });
 
-// ---------- ওয়েবহুক সেটআপ (Production) ----------
 const WEBHOOK_URL = `${config.baseUrl}/telegram/webhook`;
 bot.telegram.setWebhook(WEBHOOK_URL);
 console.log(`✅ Webhook set to ${WEBHOOK_URL}`);
 
-// বট এক্সপোর্ট করো, যাতে server.ts ব্যবহার করতে পারে
 export { bot };

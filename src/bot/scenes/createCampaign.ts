@@ -1,15 +1,9 @@
-// Telegraf থেকে প্রয়োজনীয় ফাংশন ইমপোর্ট
 import { Scenes, Markup } from 'telegraf';
-// ডাটাবেস থেকে অ্যাক্টিভ ফেসবুক অ্যাকাউন্ট আনার ফাংশন
 import { getActiveFacebookAccount } from '../../models/facebookAccount';
-// ইউজারের UUID বের করার ফাংশন (টেলিগ্রাম আইডি থেকে)
 import { getUserByTelegramId } from '../../models/user';
-// ক্যাম্পেইন ডাটাবেসে সংরক্ষণের ফাংশন
 import { createCampaignRecord } from '../../models/campaign';
-// মেটা API সার্ভিস
 import { MetaService } from '../../services/metaService';
 
-// ক্যাম্পেইন তৈরির উইজার্ড সিন তৈরি
 export const createCampaignScene = new Scenes.WizardScene(
   'CREATE_CAMPAIGN',
 
@@ -23,13 +17,11 @@ export const createCampaignScene = new Scenes.WizardScene(
       return ctx.scene.leave();
     }
 
-    // ইউজারের UUID বের করো
     const user = await getUserByTelegramId(telegramId);
     if (!user) {
       await ctx.reply('User not found in database. Please /start first.');
       return ctx.scene.leave();
     }
-    // অ্যাক্টিভ ফেসবুক অ্যাকাউন্ট খুঁজো
     const fb = await getActiveFacebookAccount(user.id);
     if (!fb) {
       await ctx.reply('No linked Facebook account. Use /addaccount first.');
@@ -39,7 +31,6 @@ export const createCampaignScene = new Scenes.WizardScene(
     const meta = new MetaService(fb.access_token);
 
     try {
-      // প্রথমে বিজনেস ম্যানেজার, তারপর ব্যক্তিগত অ্যাকাউন্ট
       const businesses = await meta.getBusinesses();
       let adAccounts: any[] = [];
       if (businesses && businesses.length > 0) {
@@ -75,13 +66,16 @@ export const createCampaignScene = new Scenes.WizardScene(
 
   // ========== ধাপ ২: ফেসবুক পেজ নির্বাচন ==========
   async (ctx) => {
+    console.log('Wizard Step 2 entered');
     const meta: MetaService = (ctx as any).session.meta;
+
     try {
       const pages = await meta.getPages();
       if (!pages || pages.length === 0) {
         await ctx.reply('No Facebook Page found.');
         return ctx.scene.leave();
       }
+
       (ctx as any).session.pages = pages;
 
       const buttons = pages.map((page: any) => [
@@ -305,13 +299,10 @@ Create campaign?`;
     return ctx.wizard.next();
   },
 
-  // ফাইনাল ধাপ (অ্যাকশন হ্যান্ডলার)
   async (ctx) => {
     return;
   }
 );
-
-// ===================== অ্যাকশন হ্যান্ডলারসমূহ =====================
 
 createCampaignScene.action(/^select_adaccount_(.+)$/, async (ctx) => {
   (ctx as any).session.campaignData.adAccountId = ctx.match[1];
