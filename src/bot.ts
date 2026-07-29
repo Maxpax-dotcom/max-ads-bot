@@ -8,6 +8,8 @@ import {
   listFacebookAccounts,
   setActiveFacebookAccount,
 } from './models/facebookAccount';
+import { MetaService } from './services/metaService';
+import { createCampaignRecord } from './models/campaign';
 
 const stage = new Scenes.Stage<any>([createCampaignScene]);
 
